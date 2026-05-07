@@ -4,37 +4,61 @@ from agent_handler import StudyAssistantHandler
 from config import ConfigManager
 import os
 
+
+def load_project_env():
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    load_dotenv(dotenv_path=env_path, override=True)
+
+
+def get_env_key(key_name: str) -> str:
+    return os.getenv(key_name, "").strip()
+
+
+def is_api_key_valid(provider: str, key_value: str) -> bool:
+    key = key_value.strip()
+    if not key:
+        return False
+    if provider == "groq":
+        return "your_groq_api_key_here" not in key.lower() and len(key) >= 20
+    return "your_openai_api_key_here" not in key.lower() and len(key) >= 20
+
+
+def get_default_provider() -> str:
+    groq_key = get_env_key("GROQ_API_KEY")
+    openai_key = get_env_key("OPENAI_API_KEY")
+    groq_valid = is_api_key_valid("groq", groq_key)
+    openai_valid = is_api_key_valid("openai", openai_key)
+    if groq_valid and not openai_valid:
+        return "groq"
+    if openai_valid and not groq_valid:
+        return "openai"
+    return "groq"
+
 # Load environment variables
-load_dotenv()
+load_project_env()
+
+def save_env_key(key_name: str, key_value: str):
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    lines = []
+    if os.path.exists(env_path):
+        with open(env_path, "r") as file:
+            lines = file.readlines()
+    found = False
+    key_value = key_value.strip()
+    for idx, line in enumerate(lines):
+        if line.strip().startswith(f"{key_name}="):
+            lines[idx] = f"{key_name}={key_value}\n"
+            found = True
+            break
+    if not found:
+        lines.append(f"{key_name}={key_value}\n")
+    with open(env_path, "w") as file:
+        file.writelines(lines)
 
 # Page configuration
 st.set_page_config(page_title="AI Study Assistant", layout="wide", page_icon="📚")
 st.title("📚 AI Study Assistant")
 st.markdown("Personalized learning with AI agents - Analysis, Roadmaps, Quizzes & RAG-powered Tutoring!")
-
-st.markdown(
-    """
-    <div style='display:flex;justify-content:space-between;gap:16px;margin:24px 0;'>
-      <div style='flex:1;min-width:220px;background:#eef6ff;border-radius:22px;padding:24px;box-shadow:0 16px 40px rgba(15,23,42,0.08);'>
-        <h3 style='margin:0;color:#0f4c81;'>Fast AI-powered personalization</h3>
-        <p style='margin:8px 0 0;color:#334155;'>Your plan adapts instantly to your topic, skill level, and learning style.</p>
-      </div>
-      <div style='flex:1;min-width:220px;background:#fff7ed;border-radius:22px;padding:24px;box-shadow:0 16px 40px rgba(15,23,42,0.08);'>
-        <h3 style='margin:0;color:#b35200;'>Interactive practice quizzes</h3>
-        <p style='margin:8px 0 0;color:#334155;'>Create quizzes that match your pace and retention goals.</p>
-      </div>
-      <div style='flex:1;min-width:220px;background:#eefde7;border-radius:22px;padding:24px;box-shadow:0 16px 40px rgba(15,23,42,0.08);'>
-        <h3 style='margin:0;color:#166534;'>Smart tutor feedback</h3>
-        <p style='margin:8px 0 0;color:#334155;'>Ask questions, get explanations, and stay motivated.</p>
-      </div>
-      <div style='flex:1;min-width:220px;background:#f5f3ff;border-radius:22px;padding:24px;box-shadow:0 16px 40px rgba(15,23,42,0.08);'>
-        <h3 style='margin:0;color:#5b21b6;'>Ready-to-use study resources</h3>
-        <p style='margin:8px 0 0;color:#334155;'>Discover curated materials for every stage of your journey.</p>
-      </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
 # Initialize config manager
 config_manager = ConfigManager()
@@ -44,20 +68,63 @@ with st.sidebar:
     st.header("⚙️ Configuration")
     
     # Provider selection
+    selected_provider = st.session_state.get("provider", get_default_provider())
     provider = st.selectbox(
         "AI Provider",
         ["groq", "openai"],
-        index=0,
+        index=0 if selected_provider == "groq" else 1,
+        key="provider",
         help="Groq is free and fast. OpenAI requires paid API key."
     )
     
-    # Model selection based on provider
     if provider == "groq":
         model_options = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "mixtral-8x7b-32768"]
-        selected_model = st.selectbox("Select Model", model_options, index=0)
+        selected_model = st.selectbox("Select Model", model_options, index=0, key="selected_model_groq")
+        groq_key = st.text_input(
+            "Groq API Key",
+            value=get_env_key("GROQ_API_KEY"),
+            type="password",
+            key="groq_key",
+            help="Enter a valid Groq API key."
+        )
+        os.environ["GROQ_API_KEY"] = groq_key
+        if st.button("Save Groq Key to .env"):
+            if groq_key:
+                save_env_key("GROQ_API_KEY", groq_key)
+                load_project_env()
+                st.success("Groq API key saved to .env")
+        if not groq_key:
+            st.error("Groq API key not found. Add GROQ_API_KEY to your .env or enter it above.")
+        elif "your_groq_api_key_here" in groq_key.lower():
+            st.warning("Groq API key appears to be the placeholder value. Replace it with a valid key.")
+        elif len(groq_key.strip()) < 20:
+            st.warning("The Groq API key looks too short. Please use a valid key.")
+        else:
+            st.success("Groq API key loaded.")
     else:
         model_options = ["gpt-4o", "gpt-4-turbo", "gpt-4o-mini", "gpt-3.5-turbo"]
-        selected_model = st.selectbox("Select Model", model_options, index=0)
+        selected_model = st.selectbox("Select Model", model_options, index=0, key="selected_model_openai")
+        openai_key = st.text_input(
+            "OpenAI API Key",
+            value=get_env_key("OPENAI_API_KEY"),
+            type="password",
+            key="openai_key",
+            help="Enter your OpenAI API key."
+        )
+        os.environ["OPENAI_API_KEY"] = openai_key
+        if st.button("Save OpenAI Key to .env"):
+            if openai_key:
+                save_env_key("OPENAI_API_KEY", openai_key)
+                load_project_env()
+                st.success("OpenAI API key saved to .env")
+        if not openai_key:
+            st.error("OpenAI API key not found. Add OPENAI_API_KEY to your .env or enter it above.")
+        elif "your_openai_api_key_here" in openai_key.lower():
+            st.warning("OpenAI API key appears to be the placeholder value. Replace it with a valid key.")
+        elif len(openai_key.strip()) < 20:
+            st.warning("The OpenAI API key looks too short. Please use a valid key.")
+        else:
+            st.success("OpenAI API key loaded.")
     
     st.divider()
     
@@ -99,16 +166,6 @@ if "handler" not in st.session_state:
     st.session_state.handler = None
 if "uploaded_files_count" not in st.session_state:
     st.session_state.uploaded_files_count = 0
-
-step_titles = {
-    1: "Select a category",
-    2: "Share your goals",
-    3: "Build your plan",
-    4: "Explore your dashboard"
-}
-progress_percent = int((st.session_state.step - 1) / 3 * 100)
-st.markdown(f"**Step {st.session_state.step}: {step_titles.get(st.session_state.step, 'Start')}**")
-st.progress(progress_percent)
 
 # Step 1: Choose Subject Category
 if st.session_state.step == 1:
@@ -195,9 +252,21 @@ elif st.session_state.step == 2:
         if st.button("← Back", type="secondary"):
             st.session_state.step = 1
             st.rerun()
+
+    groq_key = get_env_key("GROQ_API_KEY")
+    openai_key = get_env_key("OPENAI_API_KEY")
+    selected_model = st.session_state.get(
+        "selected_model_groq" if provider == "groq" else "selected_model_openai",
+        None
+    )
+    provider_key_valid = is_api_key_valid(provider, groq_key if provider == "groq" else openai_key)
+
     with col_next:
-        if st.button("Create My Learning Plan", type="primary", 
-                    disabled=not (topic and learning_goal)):
+        if st.button(
+            "Create My Learning Plan",
+            type="primary",
+            disabled=not (topic and learning_goal and provider_key_valid),
+        ):
             st.session_state.topic = topic
             st.session_state.knowledge_level = knowledge_level
             st.session_state.learning_goal = learning_goal
@@ -205,6 +274,9 @@ elif st.session_state.step == 2:
             st.session_state.learning_style = learning_style
             st.session_state.step = 3
             st.rerun()
+
+    if not provider_key_valid:
+        st.warning("Please enter a valid API key for the selected provider before creating your learning plan.")
 
 # Step 3: Generate Analysis and Roadmap
 elif st.session_state.step == 3:
@@ -223,46 +295,25 @@ elif st.session_state.step == 3:
             model_name=selected_model,
             provider=provider
         )
-
-    # Display progress cards
-    st.markdown(
-        """
-        <div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:20px 0;'>
-          <div style='padding:20px;border-radius:18px;background:#ffffff;border:1px solid #e2e8f0;'>
-            <h4 style='margin:0 0 8px;'>✅ Student analysis</h4>
-            <p style='margin:0;color:#475569;'>Understand your strengths and gaps.</p>
-          </div>
-          <div style='padding:20px;border-radius:18px;background:#ffffff;border:1px solid #e2e8f0;'>
-            <h4 style='margin:0 0 8px;'>🗺️ Roadmap generation</h4>
-            <p style='margin:0;color:#475569;'>Create an actionable learning path.</p>
-          </div>
-          <div style='padding:20px;border-radius:18px;background:#ffffff;border:1px solid #e2e8f0;'>
-            <h4 style='margin:0 0 8px;'>📚 Resource discovery</h4>
-            <p style='margin:0;color:#475569;'>Collect the best learning materials.</p>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
     
+    # Analyze student
     if not st.session_state.student_analysis:
-        with st.spinner("Analyzing your learning profile..."):
-            st.session_state.student_analysis = st.session_state.handler.analyze_student()
+        analysis_results = st.session_state.handler.analyze_student()
     
+    # Create roadmap
     if st.session_state.student_analysis and not st.session_state.learning_roadmap:
-        with st.spinner("Designing your roadmap..."):
-            st.session_state.learning_roadmap = st.session_state.handler.create_roadmap(
-                st.session_state.student_analysis
-            )
+        roadmap_results = st.session_state.handler.create_roadmap(
+            st.session_state.student_analysis
+        )
     
+    # Find resources
     if st.session_state.learning_roadmap and not st.session_state.learning_resources:
-        with st.spinner("Finding the best resources for you..."):
-            st.session_state.learning_resources = st.session_state.handler.find_resources()
+        resource_results = st.session_state.handler.find_resources()
     
+    # Move to dashboard when complete
     if (st.session_state.student_analysis and 
         st.session_state.learning_roadmap and 
         st.session_state.learning_resources):
-        st.success("Your personalized learning dashboard is ready!")
         st.session_state.step = 4
         st.rerun()
 

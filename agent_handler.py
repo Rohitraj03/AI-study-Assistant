@@ -70,23 +70,31 @@ class StudyAssistantHandler:
         with st.status("Analyzing your learning needs...", expanded=True) as status:
             status.update(label="Creating student profile...", state="running")
             
-            analyzer = self.agents.student_analyzer_agent()
-            analysis_prompt = self._format_prompt(
-                self.config["prompts"]["student_analysis"]["base"],
-                topic=self.topic,
-                subject_category=self.subject_category,
-                knowledge_level=self.knowledge_level,
-                learning_goal=self.learning_goal,
-                time_available=self.time_available,
-                learning_style=self.learning_style
-            )
-            
-            analysis_resp = analyzer.run(analysis_prompt, stream=False)
-            analysis_result = analysis_resp.content
-            results["analysis"] = analysis_result
-            st.session_state.student_analysis = analysis_result
-            
-            status.update(label="Analysis complete!", state="complete")
+            try:
+                analyzer = self.agents.student_analyzer_agent()
+                analysis_prompt = self._format_prompt(
+                    self.config["prompts"]["student_analysis"]["base"],
+                    topic=self.topic,
+                    subject_category=self.subject_category,
+                    knowledge_level=self.knowledge_level,
+                    learning_goal=self.learning_goal,
+                    time_available=self.time_available,
+                    learning_style=self.learning_style
+                )
+                
+                analysis_resp = analyzer.run(analysis_prompt, stream=False)
+                analysis_result = analysis_resp.content
+                results["analysis"] = analysis_result
+                st.session_state.student_analysis = analysis_result
+                status.update(label="Analysis complete!", state="complete")
+            except Exception as exc:
+                status.update(label="Analysis failed", state="error")
+                error_text = str(exc).lower()
+                if "invalid_api_key" in error_text or "invalid api key" in error_text:
+                    st.error("Invalid API key detected. Verify your selected provider and API key in the sidebar.")
+                else:
+                    st.error(f"Student analysis error: {exc}")
+                return {}
         
         return results
     
@@ -105,22 +113,26 @@ class StudyAssistantHandler:
         with st.status("Creating your personalized learning roadmap...", expanded=True) as status:
             status.update(label="Designing learning path...", state="running")
             
-            roadmap_creator = self.agents.roadmap_creator_agent()
-            roadmap_prompt = self._format_prompt(
-                self.config["prompts"]["roadmap_creation"]["base"],
-                student_analysis=student_analysis,
-                topic=self.topic,
-                learning_goal=self.learning_goal,
-                time_available=self.time_available,
-                knowledge_level=self.knowledge_level
-            )
-            
-            roadmap_resp = roadmap_creator.run(roadmap_prompt, stream=False)
-            roadmap_result = roadmap_resp.content
-            results["roadmap"] = roadmap_result
-            st.session_state.learning_roadmap = roadmap_result
-            
-            status.update(label="Roadmap created!", state="complete")
+            try:
+                roadmap_creator = self.agents.roadmap_creator_agent()
+                roadmap_prompt = self._format_prompt(
+                    self.config["prompts"]["roadmap_creation"]["base"],
+                    student_analysis=student_analysis,
+                    topic=self.topic,
+                    learning_goal=self.learning_goal,
+                    time_available=self.time_available,
+                    knowledge_level=self.knowledge_level
+                )
+                
+                roadmap_resp = roadmap_creator.run(roadmap_prompt, stream=False)
+                roadmap_result = roadmap_resp.content
+                results["roadmap"] = roadmap_result
+                st.session_state.learning_roadmap = roadmap_result
+                status.update(label="Roadmap created!", state="complete")
+            except Exception as exc:
+                status.update(label="Roadmap failed", state="error")
+                st.error(f"Roadmap creation error: {exc}")
+                return {}
         
         return results
     
@@ -136,21 +148,25 @@ class StudyAssistantHandler:
         with st.status("Finding learning resources...", expanded=True) as status:
             status.update(label="Searching for resources...", state="running")
             
-            resource_finder = self.agents.resource_finder_agent()
-            resource_prompt = self._format_prompt(
-                self.config["prompts"]["resource_finding"]["base"],
-                topic=self.topic,
-                learning_goal=self.learning_goal,
-                knowledge_level=self.knowledge_level,
-                learning_style=self.learning_style
-            )
-            
-            resource_resp = resource_finder.run(resource_prompt, stream=False)
-            resource_result = resource_resp.content
-            results["resources"] = resource_result
-            st.session_state.learning_resources = resource_result
-            
-            status.update(label="Resources found!", state="complete")
+            try:
+                resource_finder = self.agents.resource_finder_agent()
+                resource_prompt = self._format_prompt(
+                    self.config["prompts"]["resource_finding"]["base"],
+                    topic=self.topic,
+                    learning_goal=self.learning_goal,
+                    knowledge_level=self.knowledge_level,
+                    learning_style=self.learning_style
+                )
+                
+                resource_resp = resource_finder.run(resource_prompt, stream=False)
+                resource_result = resource_resp.content
+                results["resources"] = resource_result
+                st.session_state.learning_resources = resource_result
+                status.update(label="Resources found!", state="complete")
+            except Exception as exc:
+                status.update(label="Resources failed", state="error")
+                st.error(f"Resource discovery error: {exc}")
+                return {}
         
         return results
     

@@ -64,9 +64,21 @@ class StudyAgents:
             Model: The configured model instance
         """
         if self.provider == "groq":
-            return Groq(id=self.model_name, temperature=temperature)
+            api_key = os.getenv("GROQ_API_KEY", "").strip()
+            if not api_key:
+                raise EnvironmentError(
+                    "Missing GROQ_API_KEY. Set GROQ_API_KEY in your .env or environment."
+                )
+            os.environ["GROQ_API_KEY"] = api_key
+            return Groq(id=self.model_name, temperature=temperature, api_key=api_key)
         else:
-            return OpenAIChat(id=self.model_name, temperature=temperature)
+            openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+            if not openai_key:
+                raise EnvironmentError(
+                    "Missing OPENAI_API_KEY. Set OPENAI_API_KEY in your .env or environment."
+                )
+            os.environ["OPENAI_API_KEY"] = openai_key
+            return OpenAIChat(id=self.model_name, temperature=temperature, api_key=openai_key)
     
     def student_analyzer_agent(self):
         """
