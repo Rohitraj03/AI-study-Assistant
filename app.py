@@ -9,7 +9,7 @@ load_dotenv()
 
 # Page configuration
 st.set_page_config(page_title="AI Study Assistant", layout="wide", page_icon="📚")
-st.title("📚 Multi-Agent AI Study Assistant")
+st.title("📚 AI Study Assistant")
 st.markdown("Personalized learning with AI agents - Analysis, Roadmaps, Quizzes & RAG-powered Tutoring!")
 
 # Initialize config manager

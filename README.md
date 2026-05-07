@@ -1,4 +1,4 @@
-# 📚 Multi-Agent AI Study Assistant
+# 📚 AI Study Assistant
 
 A powerful, personalized learning platform powered by multiple specialized AI agents. Get custom learning roadmaps, practice quizzes, AI tutoring, and RAG-powered document Q&A to supercharge your studies!
 
