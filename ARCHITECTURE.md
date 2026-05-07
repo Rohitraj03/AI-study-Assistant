@@ -1,6 +1,6 @@
 # 🏗️ Architecture Overview
 
-## Multi-Agent System Design
+## AI System Design
 
 This project implements a **multi-agent architecture** where specialized AI agents collaborate to provide comprehensive learning assistance. Each agent has a specific role and expertise.
 

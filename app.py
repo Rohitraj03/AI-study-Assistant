@@ -12,6 +12,30 @@ st.set_page_config(page_title="AI Study Assistant", layout="wide", page_icon="�
 st.title("📚 AI Study Assistant")
 st.markdown("Personalized learning with AI agents - Analysis, Roadmaps, Quizzes & RAG-powered Tutoring!")
 
+st.markdown(
+    """
+    <div style='display:flex;justify-content:space-between;gap:16px;margin:24px 0;'>
+      <div style='flex:1;min-width:220px;background:#eef6ff;border-radius:22px;padding:24px;box-shadow:0 16px 40px rgba(15,23,42,0.08);'>
+        <h3 style='margin:0;color:#0f4c81;'>Fast AI-powered personalization</h3>
+        <p style='margin:8px 0 0;color:#334155;'>Your plan adapts instantly to your topic, skill level, and learning style.</p>
+      </div>
+      <div style='flex:1;min-width:220px;background:#fff7ed;border-radius:22px;padding:24px;box-shadow:0 16px 40px rgba(15,23,42,0.08);'>
+        <h3 style='margin:0;color:#b35200;'>Interactive practice quizzes</h3>
+        <p style='margin:8px 0 0;color:#334155;'>Create quizzes that match your pace and retention goals.</p>
+      </div>
+      <div style='flex:1;min-width:220px;background:#eefde7;border-radius:22px;padding:24px;box-shadow:0 16px 40px rgba(15,23,42,0.08);'>
+        <h3 style='margin:0;color:#166534;'>Smart tutor feedback</h3>
+        <p style='margin:8px 0 0;color:#334155;'>Ask questions, get explanations, and stay motivated.</p>
+      </div>
+      <div style='flex:1;min-width:220px;background:#f5f3ff;border-radius:22px;padding:24px;box-shadow:0 16px 40px rgba(15,23,42,0.08);'>
+        <h3 style='margin:0;color:#5b21b6;'>Ready-to-use study resources</h3>
+        <p style='margin:8px 0 0;color:#334155;'>Discover curated materials for every stage of your journey.</p>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Initialize config manager
 config_manager = ConfigManager()
 
@@ -75,6 +99,16 @@ if "handler" not in st.session_state:
     st.session_state.handler = None
 if "uploaded_files_count" not in st.session_state:
     st.session_state.uploaded_files_count = 0
+
+step_titles = {
+    1: "Select a category",
+    2: "Share your goals",
+    3: "Build your plan",
+    4: "Explore your dashboard"
+}
+progress_percent = int((st.session_state.step - 1) / 3 * 100)
+st.markdown(f"**Step {st.session_state.step}: {step_titles.get(st.session_state.step, 'Start')}**")
+st.progress(progress_percent)
 
 # Step 1: Choose Subject Category
 if st.session_state.step == 1:
@@ -189,25 +223,46 @@ elif st.session_state.step == 3:
             model_name=selected_model,
             provider=provider
         )
+
+    # Display progress cards
+    st.markdown(
+        """
+        <div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:20px 0;'>
+          <div style='padding:20px;border-radius:18px;background:#ffffff;border:1px solid #e2e8f0;'>
+            <h4 style='margin:0 0 8px;'>✅ Student analysis</h4>
+            <p style='margin:0;color:#475569;'>Understand your strengths and gaps.</p>
+          </div>
+          <div style='padding:20px;border-radius:18px;background:#ffffff;border:1px solid #e2e8f0;'>
+            <h4 style='margin:0 0 8px;'>🗺️ Roadmap generation</h4>
+            <p style='margin:0;color:#475569;'>Create an actionable learning path.</p>
+          </div>
+          <div style='padding:20px;border-radius:18px;background:#ffffff;border:1px solid #e2e8f0;'>
+            <h4 style='margin:0 0 8px;'>📚 Resource discovery</h4>
+            <p style='margin:0;color:#475569;'>Collect the best learning materials.</p>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     
-    # Analyze student
     if not st.session_state.student_analysis:
-        analysis_results = st.session_state.handler.analyze_student()
+        with st.spinner("Analyzing your learning profile..."):
+            st.session_state.student_analysis = st.session_state.handler.analyze_student()
     
-    # Create roadmap
     if st.session_state.student_analysis and not st.session_state.learning_roadmap:
-        roadmap_results = st.session_state.handler.create_roadmap(
-            st.session_state.student_analysis
-        )
+        with st.spinner("Designing your roadmap..."):
+            st.session_state.learning_roadmap = st.session_state.handler.create_roadmap(
+                st.session_state.student_analysis
+            )
     
-    # Find resources
     if st.session_state.learning_roadmap and not st.session_state.learning_resources:
-        resource_results = st.session_state.handler.find_resources()
+        with st.spinner("Finding the best resources for you..."):
+            st.session_state.learning_resources = st.session_state.handler.find_resources()
     
-    # Move to dashboard when complete
     if (st.session_state.student_analysis and 
         st.session_state.learning_roadmap and 
         st.session_state.learning_resources):
+        st.success("Your personalized learning dashboard is ready!")
         st.session_state.step = 4
         st.rerun()
 
