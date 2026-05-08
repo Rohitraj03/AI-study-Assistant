@@ -39,14 +39,6 @@ A powerful, personalized learning platform powered by multiple specialized AI ag
 - **Learning Style Matched**: Resources suited to how you learn best
 
 
-Common missing modules and their fixes:
-- `phidata` → `pip install phidata`
-- `openai` → `pip install openai`
-- `chromadb` → `pip install chromadb`
-- `langchain_chroma` → `pip install langchain-chroma`
-- `langchain_openai` → `pip install langchain-openai`
-- `duckduckgo_search` → `pip install duckduckgo-search`
-
 
 
 ### "No API key found" or API errors
