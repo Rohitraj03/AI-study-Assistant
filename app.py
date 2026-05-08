@@ -32,7 +32,20 @@ def get_default_provider() -> str:
         return "groq"
     if openai_valid and not groq_valid:
         return "openai"
+    if groq_valid and openai_valid:
+        return "groq"
     return "groq"
+
+
+def get_fallback_provider(current_provider: str) -> str:
+    """Get the alternate provider if current one fails."""
+    return "openai" if current_provider == "groq" else "groq"
+
+
+def is_fallback_available(fallback_provider: str) -> bool:
+    """Check if fallback provider has a valid key."""
+    key = get_env_key(f"{fallback_provider.upper()}_API_KEY")
+    return is_api_key_valid(fallback_provider, key)
 
 # Load environment variables
 load_project_env()
@@ -140,6 +153,17 @@ with st.sidebar:
     **Groq**: Free, fast inference (recommended)  
     **OpenAI**: Requires paid API key
     """)
+
+def reset_handler_if_needed(provider: str, model_name: str):
+    handler = st.session_state.get("handler")
+    if not handler:
+        return
+    if getattr(handler, "provider", None) != provider or getattr(handler, "model_name", None) != model_name:
+        st.session_state.handler = None
+        st.session_state.student_analysis = None
+        st.session_state.learning_roadmap = None
+        st.session_state.learning_resources = None
+
 
 # Initialize session state
 if "step" not in st.session_state:
@@ -259,6 +283,7 @@ elif st.session_state.step == 2:
         "selected_model_groq" if provider == "groq" else "selected_model_openai",
         None
     )
+    reset_handler_if_needed(provider, selected_model)
     provider_key_valid = is_api_key_valid(provider, groq_key if provider == "groq" else openai_key)
 
     with col_next:

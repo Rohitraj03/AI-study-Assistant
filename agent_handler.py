@@ -1,5 +1,6 @@
 import yaml
 import streamlit as st
+import os
 from study_agents import StudyAgents
 from rag_helper import RAGHelper
 from typing import Optional, Dict, Any
@@ -88,11 +89,20 @@ class StudyAssistantHandler:
                 st.session_state.student_analysis = analysis_result
                 status.update(label="Analysis complete!", state="complete")
             except Exception as exc:
-                status.update(label="Analysis failed", state="error")
                 error_text = str(exc).lower()
                 if "invalid_api_key" in error_text or "invalid api key" in error_text:
-                    st.error("Invalid API key detected. Verify your selected provider and API key in the sidebar.")
+                    status.update(label="Analysis failed", state="error")
+                    fallback = "openai" if self.provider == "groq" else "groq"
+                    fallback_key = os.getenv(f"{fallback.upper()}_API_KEY", "").strip()
+                    if fallback_key and len(fallback_key) >= 20 and "your_" not in fallback_key.lower():
+                        st.warning(f"Current provider ({self.provider}) key failed. Trying {fallback}...")
+                        self.provider = fallback
+                        self.agents.provider = fallback
+                        return self.analyze_student()
+                    else:
+                        st.error(f"Invalid API key for {self.provider}. Please enter a valid key in the sidebar.")
                 else:
+                    status.update(label="Analysis failed", state="error")
                     st.error(f"Student analysis error: {exc}")
                 return {}
         
